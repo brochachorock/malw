@@ -1,3 +1,4 @@
 /node_modules
 /.vscode
-/__pycache_.venv/  vcpkg/ 
+/__pycache_.venv
+/vcpkg/ 

