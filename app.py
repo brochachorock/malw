@@ -52,6 +52,11 @@ def video_feed():
     return Response(
         gen_frames(), mimetype="multipart/x-mixed-replace; boundary=frame"
     )
-
 if __name__ == "__main__":
-    app.run(host="localhost", port=3000, debug=False, use_reloader=False)
+    import os
+
+    # O Render injeta automaticamente a porta correta nesta variável de ambiente
+    porta = int(os.environ.get("PORT", 3000))
+
+    # IMPORTANTE: Mudar host para '0.0.0.0' para o Render conseguir mapear sua API
+    app.run(host="0.0.0.0", port=porta, debug=False)
